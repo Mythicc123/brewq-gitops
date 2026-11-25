@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: brewq-monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/Mythicc123/brewq-observability
+      targetRevision: main
+      path: charts/brewq-monitoring
+      helm:
+        releaseName: brewq-monitoring
+        valueFiles:
+          - $values/envs/local/brewq-monitoring-values.yaml
+    - repoURL: https://github.com/Mythicc123/brewq-gitops
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 8
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m

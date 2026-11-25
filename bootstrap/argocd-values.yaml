@@ -1,0 +1,50 @@
+configs:
+  params:
+    server.insecure: true
+  cm:
+    # Preserve chart-owned instance labels, including the kps Helm release name.
+    application.resourceTrackingMethod: annotation
+    # The root's sync waves wait for each child to sync and become healthy.
+    resource.customizations.health.argoproj.io_Application: |
+      if obj.status ~= nil and obj.status.sync ~= nil
+          and obj.status.sync.status == "Synced" and obj.status.health ~= nil then
+        return obj.status.health
+      end
+      return { status = "Progressing", message = "Waiting for child Application to sync" }
+
+controller:
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 1Gi}
+
+repoServer:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+
+redis:
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {memory: 128Mi}
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  # The root Application creates the children directly.
+  replicas: 0
+
+server:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}
+  httproute:
+    enabled: true
+    hostnames:
+      - argocd.localtest.me
+    parentRefs:
+      - name: edge
+        namespace: traefik

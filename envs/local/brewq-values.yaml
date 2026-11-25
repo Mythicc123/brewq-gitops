@@ -1,0 +1,9 @@
+image:
+  tag: "0.1.0"
+
+# Drills 01–04 change these values. Revert the drill commit to restore them.
+chaos:
+  errorRate: "0"
+  latencyMs: "0"
+  leakMbPerMin: "0"
+  crashOnStart: "false"
