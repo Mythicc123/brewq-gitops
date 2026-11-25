@@ -5,12 +5,12 @@ traffic generator running throughout. Start with drill 01 for the first incident
 
 | Drill | What breaks | Expected alert | Expected time to fire | What to watch |
 | --- | --- | --- | --- | --- |
-| [01 · Bad release](01-bad-release.md) | 30% injected HTTP 500s | `BrewqAvailabilityBurnFast` | About 14.4 min at full injection, plus evaluations | 5xx ratio and availability burn |
-| [02 · Slow release](02-slow-release.md) | 400 ms added latency | `BrewqLatencyBurnFast` | About 8.6 min at full injection, plus evaluations | Latency percentiles and latency burn |
-| [03 · Startup crash](03-crashloop.md) | New pods exit at startup | `BrewqPodCrashLooping` | Three restarts in 10 min or 2 min continuously in CrashLoopBackOff, plus metrics delay | Old Ready pods, new pod restarts, Argo health |
-| [04 · Memory leak](04-memory-leak.md) | New pods retain 40 MB/min | `BrewqPodOOMKilled` | About 2–4 min from container start, plus metrics delay | Memory limit, last termination reason, restarts |
+| [01 · Bad release](01-bad-release.md) | 30% injected HTTP 500s | `BrewqAvailabilityBurnFast` | About 16½ min at full injection, including the hold | 5xx ratio and availability burn |
+| [02 · Slow release](02-slow-release.md) | 400 ms added latency | `BrewqLatencyBurnFast` | About 10.6 min at full injection, including the hold | Latency percentiles and latency burn |
+| [03 · Startup crash](03-crashloop.md) | New pods exit at startup | `BrewqPodCrashLooping` | A 2 min hold once the restart or CrashLoopBackOff condition is met, plus metrics delay | Old Ready pods, new pod restarts, Argo health |
+| [04 · Memory leak](04-memory-leak.md) | New pods retain 40 MB/min | `BrewqPodOOMKilled` | About 2–4 min to the first OOM from container start, then a 1 min hold plus metrics delay | Memory limit, last termination reason, restarts |
 | [05 · Node drain](05-node-drain.md) | A worker stops taking workloads | No SLO alert expected | No firing expected | PDB, evictions, rescheduling and target continuity |
-| [06 · Drift](06-drift.md) | Live replicas change outside Git | No alert expected | No firing expected | Live replicas and Argo self-heal |
+| [06 · Drift](06-drift.md) | Live `CHAOS_LATENCY_MS` changes to 200 | No alert expected | No firing expected | Deployment environment and Argo self-heal at the same Git revision, with the HPA enabled |
 
 ## Before any drill
 
@@ -48,10 +48,14 @@ The 5m window crosses first in both drills. With six hours of healthy
 history, the other fast branch applies a 6× threshold to the 6h and 30m
 windows. Its longer window crosses at about 36 min for availability
 and 21.6 min for latency. The 1h branch drives the earlier expectation.
-The rules use a strict greater-than comparison.
+The rules use a strict greater-than comparison and hold the condition for
+two minutes before firing. A fresh cluster has fewer healthy requests in
+the long windows, so the thresholds can be crossed much sooner.
 
 These are expected times from full exposure. Rollout overlap, random errors,
 changing pod series, partial traffic history, the 15-second scrape interval
 and the rule evaluation interval can shift when an alert first fires.
-Record actual timings during the drill. Burn windows can continue to fire
-after rollback while they still contain bad requests.
+The dated measurements in drills 01–04 used the manual Helm path.
+Application recovery means the rollback rollout completed and the smoke
+test passed. The alert can clear later as the affected traffic ages out.
+Record actual timings during each drill.

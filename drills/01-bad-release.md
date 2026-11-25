@@ -6,7 +6,7 @@ See the availability SLO burn when a release injects HTTP 500 responses.
 
 ## Before you start
 
-Follow the [baseline checklist](README.md#before-any-drill). Let 5 requests per second build an hour of healthy traffic for the expected timing below.
+Follow the [baseline checklist](README.md#before-any-drill). Let 5 requests per second build six hours of healthy traffic to reproduce both window pairs in the estimate below.
 
 ## Steps
 
@@ -28,10 +28,12 @@ make alerts
 
 ## What you should see
 
-- **Alert** — `BrewqAvailabilityBurnFast` (page) is expected about 14.4 minutes after the new pods carry full traffic, plus the scrape and evaluation delay. During rollout the aggregate error fraction ramps up.
+- **Alert** — With six hours of healthy history, `BrewqAvailabilityBurnFast` (page) is expected about 16½ minutes after full exposure to 30% errors. The 1h window crosses at about 14.4 minutes and the rule holds for two more minutes. Scrapes and evaluations add a small delay. A fresh cluster has fewer healthy requests in the long windows, so the bad traffic pushes the ratio over threshold sooner.
 - **Kubernetes** — Kubernetes should show Ready pods and a completed rollout. A sample of menu requests should contain both 200 and 500 responses.
 - **Argo CD** — Argo CD should show the new revision as Synced and Healthy after rollout. The probes stay healthy while eligible requests fail.
 - **Grafana** — In `brewq-overview`, watch the 5xx ratio. In `brewq-slo`, check the 5m and 1h availability burn and budget remaining.
+
+**Measured on a fresh kind cluster, 25 Nov 2026** (AEDT) — applied 17:53:58, first nonzero 5xx ratio 17:54:46, pending 17:55:46, firing and rollback 17:57:47, application recovery confirmed by `make smoke` at 17:58:11 after an initial timeout. The 5m error ratio returned to zero at 18:02:47 while longer windows continued to fire. The page fired 3m49s after the change because Prometheus had only about 15 minutes of traffic history at injection, so the 6h/30m pair crossed its 3% threshold with fewer errors.
 
 ```bash
 for i in {1..20}; do

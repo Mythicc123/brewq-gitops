@@ -28,10 +28,12 @@ make alerts
 
 ## What you should see
 
-- **Alert** — `BrewqPodOOMKilled` (ticket) is expected after the first OOM termination and the next metric evaluations. Roughly 2–4 minutes from a new container start is a planning estimate, based on allocating 40 MB/min against 128 MiB minus baseline memory. Use the observed startup RSS for a better estimate.
+- **Alert** — The first OOM termination is expected roughly 2–4 minutes after the new container starts, based on allocating 40 MB/min against 128 MiB minus baseline memory. Use the observed startup RSS for a better estimate. `BrewqPodOOMKilled` (ticket) fires after one minute of seeing the OOM termination reason, plus scrape and evaluation delay.
 - **Kubernetes** — New pods can become Ready before their memory limit is hit. Look for `OOMKilled` in the last termination state and a rising restart count. Watch the request path for errors as pods restart.
 - **Argo CD** — Argo CD should sync the values revision. Deployment health can fluctuate as readiness changes across restarts.
 - **Grafana** — In `brewq-overview`, watch memory against the limit, then pod restarts and 5xx. In `brewq-slo`, check availability, latency and budget impact.
+
+**Measured on a fresh kind cluster, 25 Nov 2026** (AEDT) — applied 17:43:48, first memory rise in Prometheus 17:44:57, first OOM kill 17:46:48, pending 17:47:16, firing and rollback 17:48:19, alert cleared 17:48:47, application recovery confirmed by `make smoke` at 17:48:59 after the first check timed out. Both affected containers restarted with `OOMKilled`.
 
 ```bash
 kubectl --context kind-brewq -n brewq top pods

@@ -28,10 +28,12 @@ make alerts
 
 ## What you should see
 
-- **Alert** — `BrewqPodCrashLooping` (page) is expected after three restarts within 10 minutes or two continuous minutes in CrashLoopBackOff. Backoff, scheduling and metric evaluation affect the clock time.
+- **Alert** — `BrewqPodCrashLooping` (page) becomes pending when Prometheus sees at least three restarts in 10 minutes or observes CrashLoopBackOff. At least one of those signals must remain true for two minutes. Backoff, scheduling and metric evaluation affect the clock time.
 - **Kubernetes** — Expect a new pod to restart and enter CrashLoopBackOff. The old ReplicaSet should keep its Ready pods because the rollout allows zero unavailable replicas. The menu should still return 200.
 - **Argo CD** — Argo CD should show the bad revision as Synced and the Deployment as Progressing, then Degraded if it reaches the progress deadline.
-- **Grafana** — In `brewq-overview`, watch restarts and Ready pod count. In `brewq-slo`, check whether availability stayed within budget.
+- **Grafana** — In `brewq-overview`, watch container restarts. Check Ready pod counts with the Kubernetes watch. In `brewq-slo`, check whether availability stayed within budget.
+
+**Measured on a fresh kind cluster, 25 Nov 2026** (AEDT) — applied 17:41:18, first restart and CrashLoopBackOff metrics 17:41:46, pending 17:41:46, firing 17:43:47, rollback and application recovery 17:43:47, alert cleared 17:44:17. Both original pods stayed Ready and `make smoke` passed during the failed rollout.
 
 ```bash
 kubectl --context kind-brewq -n brewq get replicasets
