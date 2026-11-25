@@ -17,7 +17,9 @@ Start this watch in a second terminal before applying the live change.
 
 ```bash
 kubectl --context kind-brewq -n brewq get deployment/brewq --watch \
-  -o 'jsonpath={range .spec.template.spec.containers[?(@.name=="brewq")].env[?(@.name=="CHAOS_LATENCY_MS")]}{.value}{"\n"}{end}'
+  --output-watch-events -o json |
+  jq --unbuffered -r '.object.spec.template.spec.containers[]? |
+    select(.name == "brewq") | .env[] | select(.name == "CHAOS_LATENCY_MS") | .value'
 ```
 
 Change the live environment variable.
@@ -35,9 +37,16 @@ make alerts
 - **Argo CD** — The Application can briefly show OutOfSync or a self-heal
   operation, then return to Synced at the same Git revision. Argo CD manages
   this environment variable because the chart declares it.
+  Repeating the drill on the same revision can increase the recovery time
+  because Argo CD backs off between successive self-heal syncs.
 - **Grafana** — If a changed pod serves traffic before self-heal, request
   latency can briefly rise. The added 200 ms is below the 300 ms SLO
   threshold on an otherwise healthy service, so no SLO alert is expected.
+
+**Measured on a fresh kind cluster, 25 Nov 2026** (AEDT) — the Deployment
+watch showed `200` at 18:42:27.987 and `0` at 18:42:28.786. Argo CD reverted
+the drift in 0.80 seconds at the same Git revisions. The HPA stayed enabled,
+the rollout succeeded and Watchdog was the only firing alert at recovery.
 
 ## Recovery
 

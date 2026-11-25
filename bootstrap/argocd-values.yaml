@@ -11,6 +11,27 @@ configs:
         return obj.status.health
       end
       return { status = "Progressing", message = "Waiting for child Application to sync" }
+    # The operator reports NoPodReady while the first pod starts. Keep the
+    # sync wave waiting and still surface an operator reconciliation error.
+    resource.customizations.health.monitoring.coreos.com_Prometheus: &monitoringHealth |
+      local health = { status = "Progressing", message = "Waiting for initialization" }
+      for _, condition in ipairs((obj.status or {}).conditions or {}) do
+        if condition.type == "Reconciled" and condition.status == "False" then
+          return { status = "Degraded", message = condition.message or condition.reason }
+        end
+        if condition.type == "Available" then
+          health.message = condition.message or condition.reason
+          if condition.status == "True" then
+            health.status = "Healthy"
+          elseif condition.reason ~= "NoPodReady"
+              and condition.reason ~= "SomePodsNotReady"
+              and condition.reason ~= "StatefulSetNotFound" then
+            health.status = "Degraded"
+          end
+        end
+      end
+      return health
+    resource.customizations.health.monitoring.coreos.com_Alertmanager: *monitoringHealth
 
 controller:
   resources:

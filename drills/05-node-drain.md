@@ -13,7 +13,9 @@ Ready. Run the drain in a Bash terminal and keep it open for cleanup.
 
 ## Steps
 
-Watch pods across namespaces from a second terminal.
+Watch pods across namespaces from a second terminal. Probe the public
+`/menu` route once a second during the drain and count HTTP errors and
+connection failures.
 
 ```bash
 kubectl --context kind-brewq get pods -A -o wide --watch
@@ -34,9 +36,17 @@ test -n "$worker" && kubectl --context kind-brewq drain "$worker" \
 ## What you should see
 
 - **Alert** — No SLO burn alert is expected. `BrewqTargetDown` requires no successful Brewq scrape target for two minutes. Check the remaining target and record any scrape or monitoring gaps.
-- **Kubernetes** — The PDB keeps at least one Brewq pod available through voluntary evictions. Look for replacements on schedulable nodes. The drain can pause while availability is restored. Singleton observability pods on the worker can briefly restart.
+- **Kubernetes** — The Brewq and Traefik PDBs keep a Brewq pod and a Gateway pod available through voluntary evictions. Look for replacements on schedulable nodes. Singleton observability pods on the worker can briefly restart.
 - **Argo CD** — The Git revision remains Synced. Deployment health can fluctuate while pods reschedule.
 - **Grafana** — In `brewq-overview`, watch Ready pods, traffic, errors and restarts. In `brewq-slo`, check burn and budget through the drain.
+
+**Measured on a fresh kind cluster, 25 Nov 2026** (AEDT) — draining
+`brewq-worker2` took 14.26 seconds (18:42:33.574 to 18:42:47.831). All 14
+one-second `/menu` probes returned HTTP 200. At least one Brewq pod and
+one Traefik pod stayed Ready. Grafana restarted on `brewq-worker`. In each
+drain sample the Prometheus API responded and reported at least one Brewq
+target up. No Brewq SLO alert fired. The worker was uncordoned and the Brewq
+rollout completed.
 
 ```bash
 curl -fsS http://brewq.localtest.me/menu

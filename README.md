@@ -41,7 +41,8 @@ Builds and image pulls need internet access.
 ## Quick start
 
 For the GitOps path, run the commands below from the directory containing
-the project checkouts.
+the project checkouts. Start with a fresh cluster so Argo CD can own the
+Brewq and monitoring releases.
 
 ```bash
 make -C brewq-k8s up
@@ -54,14 +55,27 @@ make -C brewq-gitops password
 The Makefile uses the `kind-brewq` context from your `KUBECONFIG`. You can
 pass `KUBE_CONTEXT` to the Makefile if your local context has another name.
 
-Log in to [Argo CD](http://argocd.localtest.me) as `admin`. Wait for all
-Applications to be Synced and Healthy. Grafana also uses the user `admin`.
-Read its generated password locally.
+Log in to [Argo CD](http://argocd.localtest.me) as `admin`. Bootstrap
+starts reconciliation in the background. Use `make status` to wait for
+`root`, `kube-prometheus-stack`, `brewq` and `brewq-monitoring` to show
+Synced and Healthy, then verify the service.
+
+```bash
+make -C brewq-k8s smoke
+make -C brewq-k8s test
+```
+
+Grafana also uses the user `admin`. Read its generated password locally,
+then give Prometheus time to collect samples for the dashboards.
 
 ```bash
 kubectl --context kind-brewq -n monitoring get secret grafana-admin \
   -o 'go-template={{(index .data "admin-password") | base64decode}}{{"\n"}}'
 ```
+
+Check that the Brewq scrape targets are up in Prometheus and run
+`make -C brewq-gitops alerts`. Watchdog is the expected firing alert at
+the healthy baseline. Run `make -C brewq-k8s down` when you finish.
 
 For the manual path, use a fresh cluster from repo 2 and install the
 charts using repos 2 and 3.
@@ -104,7 +118,7 @@ and the platform.
 | [Startup crash](drills/03-crashloop.md) | `BrewqPodCrashLooping` | `make drill-03` |
 | [Memory leak](drills/04-memory-leak.md) | `BrewqPodOOMKilled` | `make drill-04` |
 | [Node drain](drills/05-node-drain.md) | No SLO alert expected | Follow the runbook |
-| [Replica drift](drills/06-drift.md) | Argo CD self-heals the replica count | Follow the runbook |
+| [Deployment drift](drills/06-drift.md) | Argo CD restores the declared latency setting | Follow the runbook |
 
 The [drill guide](drills/README.md) explains baseline checks and expected
 alert timing. The helper for drills 01–04 commits and pushes to `main`
@@ -125,6 +139,5 @@ the cluster and its data.
 
 ## Next steps
 
-Validate the GitOps path in a fresh cluster, run the drills and capture the
-first real incident. Use the observed alert and recovery times to refine
-the runbooks.
+Use the drill measurements to refine the runbooks and capture the first
+real incident.

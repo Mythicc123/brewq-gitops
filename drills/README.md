@@ -59,3 +59,8 @@ The dated measurements in drills 01–04 used the manual Helm path.
 Application recovery means the rollback rollout completed and the smoke
 test passed. The alert can clear later as the affected traffic ages out.
 Record actual timings during each drill.
+
+The dated measurements in drills 05–06 used the GitOps path on a fresh
+kind cluster. No Brewq SLO alert fired during either drill. The
+14.26-second drain had zero failures across 14 public `/menu` probes.
+Argo CD reverted the live latency setting in 0.80 seconds.
